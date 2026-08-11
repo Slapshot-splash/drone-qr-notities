@@ -349,6 +349,7 @@ async function newDrone(folderId){
       <p class="muted">Kies eerst het type. De drone wordt pas aangemaakt nadat je op Opslaan hebt gedrukt.</p>
       <div class="grid">
         <div><label>Drone-ID</label><input value="${id}" disabled></div>
+        <div><label for="new_name">Naam</label><input id="new_name" placeholder="Bijvoorbeeld Raven 01"></div>
         <div><label for="new_registration_number">Registratienummer</label><input id="new_registration_number" placeholder="Bijvoorbeeld PH-1234"></div>
         <div><label for="new_bindphrase">Bindphrase</label><input id="new_bindphrase" type="password" autocomplete="off" placeholder="Bindphrase"></div>
         <div><label for="new_type">Type *</label><select id="new_type" class="select">
@@ -370,11 +371,13 @@ async function createDrone(id){
   const type=document.getElementById("new_type").value;
   if(!type){alert("Kies eerst een type: ISR, DROP of STRIKE.");return;}
   const folderValue=document.getElementById("new_folder_id").value;
+  const droneName=document.getElementById("new_name").value.trim();
   const registration=document.getElementById("new_registration_number").value.trim();
   const bindphrase=document.getElementById("new_bindphrase").value;
   try{
     const payload={
       drone_id:id,
+      name:droneName||id,
       folder_id:folderValue?Number(folderValue):null,
       registration_number:registration||null,
       bindphrase:bindphrase||null,
@@ -422,12 +425,11 @@ async function dronePage(id){
     app.innerHTML=`<div class="card">
       <div class="actions"><button class="secondary" onclick="${d.folder_id?`location.hash='folder='+encodeURIComponent('${d.folder_id}')`:`location.hash=''`}">← Terug</button>
       <button onclick="editSave('${esc(id)}')">Opslaan</button><button class="danger" onclick="removeDrone('${esc(id)}')">Verwijderen</button></div>
-      <h2>${esc(id)}</h2><p class="muted">${d.registration_number?`Registratienummer: <b>${esc(d.registration_number)}</b>`:"Nog geen registratienummer"}</p>
+      <h2>${esc(d.name||id)}</h2><p class="muted">ID: <b>${esc(id)}</b> · ${d.registration_number?`Registratienummer: <b>${esc(d.registration_number)}</b>`:"Nog geen registratienummer"}</p>
       <div class="status" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div><b>Bindphrase</b><div id="bindphraseDisplay" class="muted">${d.bindphrase?esc(d.bindphrase):"Geen bindphrase opgeslagen"}</div></div>
         ${d.bindphrase?`<button class="secondary" type="button" onclick="toggleBindphrase()">Verbergen</button>`:""}
       </div>
-      <div id="deployStatus" class="status" style="display:flex;justify-content:space-between;align-items:center;gap:10px"></div>
       <div class="card compact-info">
         <h3>Operationeel & logistiek</h3>
         <div class="info-grid">
@@ -444,24 +446,25 @@ async function dronePage(id){
       <label>Map</label>
       <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
+      ${field("Naam","name",d.name||d.drone_id||"")}
       ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="bindphrase">Bindphrase wijzigen</label><input id="bindphrase" type="password" autocomplete="off" value="${esc(d.bindphrase||"")}"></div><div class="section-divider"><h3>Operationele status</h3></div>
 <div><label for="location">Locatie</label><select id="location" class="select">
 <option value="">Kies locatie</option>
-<option value="Operator" ${d.location==="Basis"?"selected":""}>Operator</option>
-<option value="TDO">TDO</option><option value="Werkplaats" ${d.location==="Werkplaats"?"selected":""}>Werkplaats</option>
+<option value="Operator" ${d.location==="Operator"||d.location==="Basis"?"selected":""}>Operator</option>
+<option value="Werkplaats" ${d.location==="Werkplaats"?"selected":""}>Werkplaats</option>
+<option value="TDO" ${d.location==="TDO"?"selected":""}>TDO</option>
 <option value="Fabrikant" ${d.location==="Fabrikant"?"selected":""}>Fabrikant</option>
 <option value="Onderweg" ${d.location==="Onderweg"?"selected":""}>Onderweg</option>
 <option value="Elders" ${d.location==="Elders"?"selected":""}>Elders</option>
 </select></div>
 <div><label for="operational_status">Status</label><select id="operational_status" class="select">
 <option value="">Kies status</option>
-<option value="Beschikbaar" ${d.operational_status==="Beschikbaar"?"selected":""}>Beschikbaar</option>
-<option value="In gebruik" ${d.operational_status==="In gebruik"?"selected":""}>In gebruik</option>
+<option value="Inzetbaar" ${d.operational_status==="Inzetbaar"?"selected":""}>Inzetbaar</option>
 <option value="Onderhoud" ${d.operational_status==="Onderhoud"?"selected":""}>Onderhoud</option>
 <option value="Reparatie" ${d.operational_status==="Reparatie"?"selected":""}>Reparatie</option>
-<option value="Opgestuurd" ${d.operational_status==="Opgestuurd"?"selected":""}>Opgestuurd</option>
-<option value="Onderweg" ${d.operational_status==="Onderweg"?"selected":""}>Onderweg</option>
+<option value="Fabrikant" ${d.operational_status==="Fabrikant"?"selected":""}>Fabrikant</option>
 <option value="Afgeschreven" ${d.operational_status==="Afgeschreven"?"selected":""}>Afgeschreven</option>
+<option value="Uitgeleend" ${d.operational_status==="Uitgeleend"?"selected":""}>Uitgeleend</option>
 </select></div>
 <div class="section-divider"><h3>Reparatie / logistiek</h3></div>
 <div><label for="manufacturer">Fabrikant</label><input id="manufacturer" value="${esc(d.manufacturer||"")}"></div>
@@ -518,6 +521,7 @@ async function toggleDeploy(id,current){
 async function editSave(id){
   const folderValue=document.getElementById("folder_id").value;
   const row={
+  name:document.getElementById("name").value.trim()||id,
   folder_id:folderValue?Number(folderValue):null,
   registration_number:document.getElementById("registration_number").value.trim()||null,
   bindphrase:document.getElementById("bindphrase").value||null,
