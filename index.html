@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Drone QR Notities</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f4f6f8;color:#17202a}
+header{background:#182b24;color:#fff;padding:18px 20px}header h1{margin:0;font-size:22px}
+main{max-width:900px;margin:20px auto;padding:0 14px}.card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
+button{border:0;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer;background:#1f6f4a;color:white}
+button.secondary{background:#e8edf0;color:#17202a}button.danger{background:#b42318}
+input,textarea{width:100%;padding:11px;border:1px solid #ccd4d9;border-radius:8px;font:inherit;margin:5px 0 12px}
+label{font-weight:650;font-size:14px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.list{display:grid;gap:8px}.item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #dde3e7;border-radius:10px}
+.muted{color:#66737d;font-size:13px}.qrbox{text-align:center}.qrbox img{max-width:280px;width:100%}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.status{padding:10px;border-radius:8px;background:#eef5f1;margin-bottom:12px}.error{background:#fff0ef;color:#8a1c13}
+@media(max-width:650px){.grid{grid-template-columns:1fr}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header><h1>🚁 Drone QR Notities</h1></header>
+<main id="app"><div class="card">Laden...</div></main>
+<script>
+/*
+  Vul deze twee waarden in met de gegevens uit Supabase.
+  Gebruik ALLEEN de publishable/anon key. NOOIT de service_role key.
+*/
+const SUPABASE_URL = "https://mgnkjwwpvslvwgtpdjzo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ffVQ1eDnC3G7R6oimAZC2Q_ARyvzTdW";
+const configured = !SUPABASE_URL.includes("VUL_HIER") && !SUPABASE_KEY.includes("VUL_HIER");
+const db = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+const app=document.getElementById("app");
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function qrUrl(id){return location.href.split("#")[0]+"#drone="+encodeURIComponent(id);}
+function qrImage(text){return "https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=12&data="+encodeURIComponent(text);}
+function field(label,key,val){return `<div><label>${label}</label><input id="${key}" value="${esc(val)}"></div>`;}
+
+async function getDrones(){
+  const {data,error}=await db.from("drones").select("*").order("drone_id");
+  if(error) throw error; return data||[];
+}
+async function getDrone(id){
+  const {data,error}=await db.from("drones").select("*").eq("drone_id",id).maybeSingle();
+  if(error) throw error; return data;
+}
+function showError(e){app.innerHTML=`<div class="card error"><h2>Er is iets misgegaan</h2><p>${esc(e.message||e)}</p><button onclick="location.reload()">Opnieuw proberen</button></div>`;}
+
+async function home(){
+  if(!configured){app.innerHTML=`<div class="card error"><h2>Supabase nog niet gekoppeld</h2><p>Open <b>index.html</b> en vul alleen de <b>Publishable key</b> van Supabase in bij SUPABASE_KEY. Gebruik nooit de Secret key.</p></div>`;return;}
+  try{
+    const rows=await getDrones();
+    app.innerHTML=`<div class="card"><button onclick="newDrone()">+ Drone toevoegen</button>
+      <p class="muted">De gegevens worden centraal opgeslagen. De QR-code van een drone blijft hetzelfde.</p></div>
+      <div class="card"><h2>Mijn drones</h2><div id="list" class="list"></div></div>`;
+    const list=document.getElementById("list");
+    if(!rows.length){list.innerHTML='<p class="muted">Nog geen drones aangemaakt.</p>';return;}
+    rows.forEach(d=>list.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div></div><button onclick="location.hash='drone='+encodeURIComponent('${encodeURIComponent(d.drone_id)}')">Openen</button></div>`);
+  }catch(e){showError(e)}
+}
+async function newDrone(){
+  try{
+    const rows=await getDrones();
+    const nums=rows.map(x=>/^DRONE-(\d+)$/.test(x.drone_id)?+x.drone_id.split("-")[1]:0);
+    const id="DRONE-"+(Math.max(0,...nums)+1).toString().padStart(3,"0");
+    const {error}=await db.from("drones").insert({drone_id:id});
+    if(error) throw error;
+    location.hash="drone="+encodeURIComponent(id);
+  }catch(e){showError(e)}
+}
+async function dronePage(id){
+  try{
+    const d=await getDrone(id);
+    if(!d){app.innerHTML='<div class="card"><h2>Drone niet gevonden</h2><button onclick="location.hash=\'\'">Terug</button></div>';return;}
+    app.innerHTML=`<div class="card">
+      <div class="actions"><button class="secondary" onclick="location.hash=''">← Overzicht</button>
+      <button onclick="editSave('${esc(id)}')">Opslaan</button><button class="danger" onclick="removeDrone('${esc(id)}')">Verwijderen</button></div>
+      <h2>${esc(id)}</h2><div id="status"></div>
+      <div class="grid">
+      ${field("Type","type",d.type)}${field("Flight controller","fc",d.fc)}
+      ${field("ESC","esc",""+(d.esc||""))}${field("Motoren","motors",d.motors)}
+      ${field("RX","rx",d.rx)}${field("VTX","vtx",d.vtx)}
+      ${field("GPS","gps",d.gps)}${field("Firmware","firmware",d.firmware)}
+      ${field("Accu","battery",d.battery)}</div>
+      <label>Notities</label><textarea id="notes" rows="7">${esc(d.notes)}</textarea>
+      <label>Onderhoudshistorie</label><textarea id="history" rows="7">${esc(d.history)}</textarea>
+    </div>
+    <div class="card qrbox"><h2>QR-sticker</h2>
+      <p class="muted">Deze QR opent altijd deze dronepagina. Wijzigingen veranderen de QR niet.</p>
+      <img src="${qrImage(qrUrl(id))}" alt="QR-code ${esc(id)}"><p><b>${esc(id)}</b></p>
+      <div class="actions" style="justify-content:center"><button onclick="downloadQR('${esc(id)}')">QR opslaan</button><button class="secondary" onclick="printQR('${esc(id)}')">QR printen</button></div>
+    </div>`;
+  }catch(e){showError(e)}
+}
+async function editSave(id){
+  const row={type:type.value,fc:fc.value,esc:document.getElementById("esc").value,motors:motors.value,rx:rx.value,vtx:vtx.value,gps:gps.value,firmware:firmware.value,battery:battery.value,notes:notes.value,history:history.value,updated_at:new Date().toISOString()};
+  const {error}=await db.from("drones").update(row).eq("drone_id",id);
+  if(error){showError(error);return}
+  document.getElementById("status").innerHTML='<div class="status">✓ Opgeslagen</div>';
+}
+async function removeDrone(id){
+  if(!confirm("Deze drone verwijderen?")) return;
+  const {error}=await db.from("drones").delete().eq("drone_id",id);
+  if(error){showError(error);return} location.hash="";
+}
+function downloadQR(id){
+  const a=document.createElement("a");a.href=qrImage(qrUrl(id));a.download=id+"-QR.png";a.target="_blank";document.body.appendChild(a);a.click();a.remove();
+}
+function printQR(id){
+  const w=window.open("","_blank","width=500,height=650");
+  w.document.write(`<html><head><title>${id}</title><style>body{text-align:center;font-family:Arial;padding:20px}img{width:45mm;height:45mm}</style></head><body><img src="${qrImage(qrUrl(id))}"><h3>${id}</h3><script>window.onload=()=>window.print()<\\/script></body></html>`);
+  w.document.close();
+}
+async function render(){
+  if(location.hash.startsWith("#drone=")){
+    const id=decodeURIComponent(location.hash.slice(7)); await dronePage(id);
+  }else await home();
+}
+window.addEventListener("hashchange",render); render();
+</script>
+</body>
+</html>
