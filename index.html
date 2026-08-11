@@ -27,7 +27,7 @@ label{font-weight:650;font-size:14px}.grid{display:grid;grid-template-columns:re
   Vul deze twee waarden in met de gegevens uit Supabase.
   Gebruik ALLEEN de publishable/anon key. NOOIT de service_role key.
 */
-const SUPABASE_URL = "https://mgnkjwwpvslvwgtpdjzo.supabase.co";
+const SUPABASE_URL = "https://mgnkjwwpvslwwgtpdjzo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ffVQ1eDnC3G7R6oimAZC2Q_ARyvzTdW";
 const configured = !SUPABASE_URL.includes("VUL_HIER") && !SUPABASE_KEY.includes("VUL_HIER");
 const db = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
