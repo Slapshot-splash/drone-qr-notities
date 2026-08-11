@@ -17,7 +17,7 @@ header{background:linear-gradient(135deg,#15231e,#1f6f4a);color:#fff;padding:16p
 .header-inner{max-width:980px;margin:auto;display:flex;align-items:center;gap:13px}
 .logo{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:0 0 auto}
 .logo svg{width:27px;height:27px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.brand{font-weight:800;font-size:19px;letter-spacing:.1px}.brand-sub{font-size:12px;color:rgba(255,255,255,.72);margin-top:1px}
+.brand{font-weight:800;font-size:19px;letter-spacing:.1px}.brand-sub{font-size:12px;color:rgba(255,255,255,.72);margin-top:1px}.header-nav{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:8px 12px}.header-nav:hover{background:rgba(255,255,255,.2)}
 main{max-width:980px;margin:26px auto;padding:0 16px 40px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
 .card h2{margin:0 0 14px;font-size:19px;letter-spacing:-.2px}.card h3{margin:0}
@@ -62,6 +62,7 @@ label{font-weight:700;font-size:13px;color:#34414a}
     </svg>
   </div>
   <div><div class="brand">Drone QR Notities</div><div class="brand-sub">Fleet & onderhoudsbeheer</div></div>
+  <button class="header-nav" onclick="location.hash='dashboard'">Dashboard</button>
 </div></header>
 <main id="app"><div class="card">Laden...</div></main>
 <script>
@@ -135,7 +136,7 @@ async function home(){
     if(!unassigned.length) unEl.innerHTML='<p class="muted empty">Geen drones zonder map.</p>';
     else unassigned.forEach(d=>{
       unEl.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${d.registration_number?`Registratie: ${esc(d.registration_number)} · `:""}${esc(d.type||"")}</div></div>
-        <button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div>`;
+        <div class="actions"><span class="badge" style="color:${d.is_deployable===false?"var(--danger)":"var(--accent)"}">${d.is_deployable===false?"✕ Niet inzetbaar":"✓ Inzetbaar"}</span><button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div></div>`;
     });
   }catch(e){showError(e)}
 }
@@ -143,44 +144,83 @@ async function dashboard(){
   try{
     const [rows,folders]=await Promise.all([getDrones(),getFolders()]);
     const good=rows.filter(d=>d.is_deployable!==false).length;
-    const bad=rows.length-good;
+    const bad=rows.filter(d=>d.is_deployable===false).length;
     const types=["ISR","DROP","STRIKE"];
-    const directChildren=(fid)=>folders.filter(f=>String(f.parent_id)===String(fid));
+
     const descendants=(fid)=>{
-      const ids=new Set([String(fid)]); let changed=true;
-      while(changed){changed=false; folders.forEach(f=>{if(f.parent_id!=null && ids.has(String(f.parent_id)) && !ids.has(String(f.id))){ids.add(String(f.id));changed=true;}})}
+      const ids=new Set([String(fid)]);
+      let changed=true;
+      while(changed){
+        changed=false;
+        folders.forEach(f=>{
+          if(f.parent_id!=null && ids.has(String(f.parent_id)) && !ids.has(String(f.id))){
+            ids.add(String(f.id)); changed=true;
+          }
+        });
+      }
       return ids;
     };
-    const stats=folders.filter(f=>!f.parent_id).map(f=>{
-      const ids=descendants(f.id);
-      const ds=rows.filter(d=>d.folder_id!=null && ids.has(String(d.folder_id)));
-      return {f,total:ds.length,good:ds.filter(d=>d.is_deployable!==false).length,bad:ds.filter(d=>d.is_deployable===false).length};
-    });
+
     const typeStats=types.map(t=>{
       const ds=rows.filter(d=>String(d.type||"").toUpperCase()===t);
       return {t,total:ds.length,good:ds.filter(d=>d.is_deployable!==false).length,bad:ds.filter(d=>d.is_deployable===false).length};
     });
+
+    const rootFolders=folders.filter(f=>!f.parent_id);
+    const folderStats=rootFolders.map(f=>{
+      const ids=descendants(f.id);
+      const ds=rows.filter(d=>d.folder_id!=null && ids.has(String(d.folder_id)));
+      return {
+        f,total:ds.length,
+        good:ds.filter(d=>d.is_deployable!==false).length,
+        bad:ds.filter(d=>d.is_deployable===false).length,
+        types:types.map(t=>{
+          const td=ds.filter(d=>String(d.type||"").toUpperCase()===t);
+          return {t,total:td.length,good:td.filter(d=>d.is_deployable!==false).length};
+        })
+      };
+    });
+
     app.innerHTML=`<div class="card hero">
-      <div class="section-head"><div><div class="crumb">Overzicht</div><h2>Dashboard</h2><p class="muted">Actuele inzetbaarheid van je dronevloot.</p></div>
-      <button class="secondary" onclick="location.hash=''">← Terug</button></div>
+      <div class="section-head">
+        <div><div class="crumb">Overzicht</div><h2>Dashboard</h2><p class="muted">Actuele status van de volledige dronevloot.</p></div>
+        <button class="secondary" onclick="location.hash=''">← Home</button>
+      </div>
     </div>
     <div class="grid">
       <div class="card"><div class="muted">Totaal drones</div><div style="font-size:30px;font-weight:800">${rows.length}</div></div>
       <div class="card"><div class="muted">Inzetbaar</div><div style="font-size:30px;font-weight:800;color:var(--accent)">${good}</div></div>
       <div class="card"><div class="muted">Niet inzetbaar</div><div style="font-size:30px;font-weight:800;color:var(--danger)">${bad}</div></div>
     </div>
-    <div class="card"><h2>Per type</h2>
+    <div class="card">
+      <div class="section-head"><h2>Per type</h2><span class="badge">Totaal / inzetbaar / niet inzetbaar</span></div>
       <div class="list">
         ${typeStats.map(s=>`<div class="item">
           <div><b>${s.t}</b><div class="muted">${s.total} totaal · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div>
-          <span class="badge">${s.total?s.good+"/"+s.total:"0"}</span>
+          <span class="badge">${s.total ? `${s.good}/${s.total}` : "0"}</span>
         </div>`).join("")}
       </div>
     </div>
-    <div class="card"><h2>Per hoofdmap</h2><div class="list" id="dashFolders"></div></div>`;
+    <div class="card">
+      <div class="section-head"><h2>Per hoofdmap</h2></div>
+      <div class="list" id="dashFolders"></div>
+    </div>`;
+
     const el=document.getElementById("dashFolders");
-    if(!stats.length){el.innerHTML='<p class="muted">Nog geen mappen.</p>';return;}
-    stats.forEach(s=>el.innerHTML+=`<div class="item"><div><b>▣ ${esc(s.f.name)}</b><div class="muted">${s.total} drones · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div><button onclick="openFolder(${s.f.id})">Openen</button></div>`);
+    if(!folderStats.length){
+      el.innerHTML='<p class="muted">Nog geen mappen.</p>';
+    }else{
+      folderStats.forEach(s=>{
+        el.innerHTML+=`<div class="item">
+          <div>
+            <b>▣ ${esc(s.f.name)}</b>
+            <div class="muted">${s.total} drones · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div>
+            <div class="muted">${s.types.map(x=>`${x.t}: ${x.total}/${x.good}`).join(" · ")}</div>
+          </div>
+          <button onclick="openFolder(${s.f.id})">Openen</button>
+        </div>`;
+      });
+    }
   }catch(e){showError(e)}
 }
 
@@ -214,6 +254,7 @@ async function folderPage(folderId){
         <button class="secondary" onclick="${parent?`openFolder(${parent.id})`:`location.hash=''`}">← ${parent?`Naar ${esc(parent.name)}`:"Alle mappen"}</button>
         <button onclick="newFolder(${folder.id})">+ Submap</button>
         <button onclick="newDrone(${folder.id})">+ Drone toevoegen</button>
+        <button class="secondary" onclick="location.hash='dashboard'">Dashboard</button>
         <button class="secondary" onclick="renameFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Mapnaam wijzigen</button>
       </div>
       <div class="crumb">Map</div>
@@ -234,7 +275,7 @@ async function folderPage(folderId){
     const list=document.getElementById("list");
     if(!drones.length){list.innerHTML='<p class="muted">Nog geen drones in deze map. Je kunt hierboven een drone of submap toevoegen.</p>';return;}
     drones.forEach(d=>list.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${d.registration_number?`Registratie: ${esc(d.registration_number)} · `:""}${esc(d.type||"")}</div></div>
-      <button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div>`);
+      <div class="actions"><span class="badge" style="color:${d.is_deployable===false?"var(--danger)":"var(--accent)"}">${d.is_deployable===false?"✕ Niet inzetbaar":"✓ Inzetbaar"}</span><button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div></div>`);
   }catch(e){showError(e)}
 }
 async function newDrone(folderId){
@@ -242,11 +283,53 @@ async function newDrone(folderId){
     const rows=await getDrones();
     const nums=rows.map(x=>/^DRONE-(\d+)$/.test(x.drone_id)?+x.drone_id.split("-")[1]:0);
     const id="DRONE-"+(Math.max(0,...nums)+1).toString().padStart(3,"0");
-    const {error}=await db.from("drones").insert({drone_id:id,folder_id:folderId});
+    const folders=await getFolders();
+    const options=folders.map(f=>`<option value="${f.id}" ${String(f.id)===String(folderId)?"selected":""}>${esc(f.name)}</option>`).join("");
+
+    app.innerHTML=`<div class="card">
+      <div class="actions">
+        <button class="secondary" onclick="openFolder(${folderId})">← Terug</button>
+      </div>
+      <div class="crumb">Nieuwe drone</div>
+      <h2>${id}</h2>
+      <p class="muted">Kies eerst het type. De drone wordt pas aangemaakt nadat je op Opslaan hebt gedrukt.</p>
+      <div class="grid">
+        <div><label>Drone-ID</label><input value="${id}" disabled></div>
+        <div><label for="new_registration_number">Registratienummer</label><input id="new_registration_number" placeholder="Bijvoorbeeld PH-1234"></div>
+        <div><label for="new_type">Type *</label><select id="new_type" class="select">
+          <option value="">Kies type</option>
+          <option value="ISR">ISR</option>
+          <option value="DROP">DROP</option>
+          <option value="STRIKE">STRIKE</option>
+        </select></div>
+        <div><label for="new_folder_id">Map</label><select id="new_folder_id" class="select"><option value="">Geen map</option>${options}</select></div>
+      </div>
+      <div class="actions">
+        <button onclick="createDrone('${id}')">Drone aanmaken</button>
+        <button class="secondary" onclick="openFolder(${folderId})">Annuleren</button>
+      </div>
+    </div>`;
+  }catch(e){showError(e)}
+}
+async function createDrone(id){
+  const type=document.getElementById("new_type").value;
+  if(!type){alert("Kies eerst een type: ISR, DROP of STRIKE.");return;}
+  const folderValue=document.getElementById("new_folder_id").value;
+  const registration=document.getElementById("new_registration_number").value.trim();
+  try{
+    const payload={
+      drone_id:id,
+      folder_id:folderValue?Number(folderValue):null,
+      registration_number:registration||null,
+      type:type,
+      is_deployable:true
+    };
+    const {error}=await db.from("drones").insert(payload);
     if(error) throw error;
     openDrone(id);
   }catch(e){showError(e)}
 }
+
 async function renameFolder(id,currentName){
   const name=prompt("Nieuwe mapnaam:",currentName);
   if(name===null) return;
@@ -288,13 +371,12 @@ async function dronePage(id){
       <label>Map</label>
       <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
-      ${field("Registratienummer","registration_number",d.registration_number||"")}<label for="type">Type</label>
-    <select id="type" class="select">
-      <option value="">Kies type</option>
-      <option value="ISR" ${d.type==="ISR"?"selected":""}>ISR</option>
-      <option value="DROP" ${d.type==="DROP"?"selected":""}>DROP</option>
-      <option value="STRIKE" ${d.type==="STRIKE"?"selected":""}>STRIKE</option>
-    </select>${field("Flight controller","fc",d.fc)}
+      ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="type">Type</label><select id="type" class="select">
+<option value="">Kies type</option>
+<option value="ISR" ${d.type==="ISR"?"selected":""}>ISR</option>
+<option value="DROP" ${d.type==="DROP"?"selected":""}>DROP</option>
+<option value="STRIKE" ${d.type==="STRIKE"?"selected":""}>STRIKE</option>
+</select></div>${field("Flight controller","fc",d.fc)}
       ${field("ESC","esc",""+(d.esc||""))}${field("Motoren","motors",d.motors)}
       ${field("RX","rx",d.rx)}${field("VTX","vtx",d.vtx)}
       ${field("GPS","gps",d.gps)}${field("Firmware","firmware",d.firmware)}
@@ -302,6 +384,7 @@ async function dronePage(id){
       <label>Notities</label><textarea id="notes" rows="7">${esc(d.notes)}</textarea>
       <label>Onderhoudshistorie</label><textarea id="history" rows="7">${esc(d.history)}</textarea>
     </div>
+    <script></script>
     <div class="card qrbox"><h2>QR-sticker</h2>
       <p class="muted">Deze QR opent altijd deze dronepagina. Wijzigingen aan de map veranderen de QR niet.</p>
       <img src="${qrImage(qrUrl(id))}" alt="QR-code ${esc(id)}"><p><b>${esc(id)}</b></p>
@@ -321,7 +404,22 @@ async function toggleDeploy(id,current){
 }
 async function editSave(id){
   const folderValue=document.getElementById("folder_id").value;
-  const row={folder_id:folderValue?Number(folderValue):null,registration_number:document.getElementById("registration_number").value.trim(),type:type.value,fc:fc.value,esc:document.getElementById("esc").value,motors:motors.value,rx:rx.value,vtx:vtx.value,gps:gps.value,firmware:firmware.value,battery:battery.value,notes:notes.value,history:history.value,updated_at:new Date().toISOString()};
+  const row={
+  folder_id:folderValue?Number(folderValue):null,
+  registration_number:document.getElementById("registration_number").value.trim()||null,
+  type:document.getElementById("type").value||null,
+  fc:document.getElementById("fc").value,
+  esc:document.getElementById("esc").value,
+  motors:document.getElementById("motors").value,
+  rx:document.getElementById("rx").value,
+  vtx:document.getElementById("vtx").value,
+  gps:document.getElementById("gps").value,
+  firmware:document.getElementById("firmware").value,
+  battery:document.getElementById("battery").value,
+  notes:document.getElementById("notes").value,
+  history:document.getElementById("history").value,
+  updated_at:new Date().toISOString()
+};
   const {error}=await db.from("drones").update(row).eq("drone_id",id);
   if(error){showError(error);return}
   document.getElementById("status").innerHTML='<div class="status">✓ Opgeslagen</div>';
