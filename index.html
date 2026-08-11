@@ -236,7 +236,12 @@ async function newFolder(parentId=null){
     openFolder(data.id);
   }catch(e){showError(e)}
 }
-function openFolder(id){location.hash="folder="+encodeURIComponent(id);}
+function openFolder(id){
+  const target="folder="+encodeURIComponent(id);
+  if(location.hash.slice(1)===target){ folderPage(id); }
+  else { location.hash=target; }
+}
+function cancelNewDrone(folderId){ folderPage(folderId); }
 function openDrone(id){location.hash="drone="+encodeURIComponent(id);}
 async function folderPage(folderId){
   try{
@@ -288,7 +293,7 @@ async function newDrone(folderId){
 
     app.innerHTML=`<div class="card">
       <div class="actions">
-        <button class="secondary" onclick="openFolder(${folderId})">← Terug</button>
+        <button class="secondary" onclick="cancelNewDrone(${folderId})">← Terug</button>
       </div>
       <div class="crumb">Nieuwe drone</div>
       <h2>${id}</h2>
@@ -306,7 +311,7 @@ async function newDrone(folderId){
       </div>
       <div class="actions">
         <button onclick="createDrone('${id}')">Drone aanmaken</button>
-        <button class="secondary" onclick="openFolder(${folderId})">Annuleren</button>
+        <button class="secondary" onclick="cancelNewDrone(${folderId})">Annuleren</button>
       </div>
     </div>`;
   }catch(e){showError(e)}
