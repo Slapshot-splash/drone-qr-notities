@@ -374,12 +374,16 @@ async function dronePage(id){
       <div class="actions"><button class="secondary" onclick="${d.folder_id?`location.hash='folder='+encodeURIComponent('${d.folder_id}')`:`location.hash=''`}">← Terug</button>
       <button onclick="editSave('${esc(id)}')">Opslaan</button><button class="danger" onclick="removeDrone('${esc(id)}')">Verwijderen</button></div>
       <h2>${esc(id)}</h2><p class="muted">${d.registration_number?`Registratienummer: <b>${esc(d.registration_number)}</b>`:"Nog geen registratienummer"}</p>
+      <div class="status" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div><b>Bindphrase</b><div id="bindphraseDisplay" class="muted">${d.bindphrase?esc(d.bindphrase):"Geen bindphrase opgeslagen"}</div></div>
+        ${d.bindphrase?`<button class="secondary" type="button" onclick="toggleBindphrase()">Verbergen</button>`:""}
+      </div>
       <div id="deployStatus" class="status" style="display:flex;justify-content:space-between;align-items:center;gap:10px"></div>
       <div id="status"></div>
       <label>Map</label>
       <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
-      ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="bindphrase">Bindphrase</label><input id="bindphrase" type="password" autocomplete="off" value="${esc(d.bindphrase||"")}"></div><div><label for="type">Type</label><select id="type" class="select">
+      ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="bindphrase">Bindphrase wijzigen</label><input id="bindphrase" type="password" autocomplete="off" value="${esc(d.bindphrase||"")}"></div><div><label for="type">Type</label><select id="type" class="select">
 <option value="">Kies type</option>
 <option value="ISR" ${d.type==="ISR"?"selected":""}>ISR</option>
 <option value="DROP" ${d.type==="DROP"?"selected":""}>DROP</option>
@@ -403,6 +407,22 @@ async function dronePage(id){
     deploy.style.color=ok?"var(--accent)":"var(--danger)";
     deploy.innerHTML=`<b>${ok?"✓ INZETBAAR":"✕ NIET INZETBAAR"}</b><button class="${ok?"danger":"secondary"}" onclick="toggleDeploy('${esc(id)}',${ok})">${ok?"Niet inzetbaar maken":"Inzetbaar maken"}</button>`;
   }catch(e){showError(e)}
+}
+function toggleBindphrase(){
+  const el=document.getElementById("bindphraseDisplay");
+  const btn=event && event.currentTarget ? event.currentTarget : null;
+  if(!el) return;
+  const hidden=el.dataset.hidden==="1";
+  if(hidden){
+    el.textContent=el.dataset.value||"";
+    el.dataset.hidden="0";
+    if(btn) btn.textContent="Verbergen";
+  }else{
+    el.dataset.value=el.textContent;
+    el.textContent="••••••••";
+    el.dataset.hidden="1";
+    if(btn) btn.textContent="Tonen";
+  }
 }
 async function toggleDeploy(id,current){
   const {error}=await db.from("drones").update({is_deployable:!current,updated_at:new Date().toISOString()}).eq("drone_id",id);
