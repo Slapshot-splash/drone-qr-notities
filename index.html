@@ -180,7 +180,7 @@ async function home(){
     const unEl=document.getElementById("unassigned");
     if(!unassigned.length) unEl.innerHTML='<p class="muted empty">Geen drones zonder map.</p>';
     else unassigned.forEach(d=>{
-      unEl.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${d.registration_number?`Registratie: ${esc(d.registration_number)} · `:""}${esc(d.type||"")}</div></div>
+      unEl.innerHTML+=`<div class="item"><div><b>${esc(d.name||d.drone_id)}</b><div class="muted">ID: ${esc(d.drone_id)}${d.registration_number?` · Registratie: ${esc(d.registration_number)}`:""}${d.type?` · ${esc(d.type)}`:""}</div></div>
         <div class="actions"><span class="badge">${esc(d.operational_status||"Geen status")}</span><button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div></div>`;
     });
   }catch(e){showError(e)}
