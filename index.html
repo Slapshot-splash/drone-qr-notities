@@ -52,6 +52,9 @@ label{font-weight:700;font-size:13px;color:#34414a}
 .map-title img, .folder-title img, .section-title img{width:34px;height:34px;object-fit:contain;border-radius:6px;flex:0 0 34px}
 .folder-card img, .map-card img{width:34px;height:34px;object-fit:contain;border-radius:6px;flex:0 0 34px}
 .dashboard-folder img{width:28px;height:28px;object-fit:contain;border-radius:5px;flex:0 0 28px}
+
+.type-logo{width:34px !important;height:34px !important;object-fit:contain !important;flex:0 0 34px !important;border-radius:7px !important;background:#fff !important;border:1px solid var(--line,#dce3e8) !important;padding:2px !important;}
+.type-heading{display:flex !important;align-items:center !important;gap:9px !important;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -234,9 +237,12 @@ async function dashboard(){
       <div class="section-head"><h2>Per type</h2><span class="badge">Totaal / inzetbaar / niet inzetbaar</span></div>
       <div class="list">
         ${typeStats.map(s=>`<div class="item">
-          <div><b>${s.t}</b><div class="muted">${s.total} totaal · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div>
-          <span class="badge">${s.total ? `${s.good}/${s.total}` : "0"}</span>
-        </div>`).join("")}
+           <div class="type-heading">
+             ${logoHtml(s.t,"type-logo")}
+             <div><b>${esc(s.t)}</b><div class="muted">${s.total} totaal · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div>
+           </div>
+           <span class="badge">${s.total ? `${s.good}/${s.total}` : "0"}</span>
+         </div>`).join("")}
       </div>
     </div>
     <div class="card">
