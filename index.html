@@ -5,22 +5,78 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Drone QR Notities</title>
 <style>
-*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#f4f6f8;color:#17202a}
-header{background:#182b24;color:#fff;padding:18px 20px}header h1{margin:0;font-size:22px}
-main{max-width:900px;margin:20px auto;padding:0 14px}.card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
-button{border:0;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer;background:#1f6f4a;color:white}
-button.secondary{background:#e8edf0;color:#17202a}button.danger{background:#b42318}
-input,textarea{width:100%;padding:11px;border:1px solid #ccd4d9;border-radius:8px;font:inherit;margin:5px 0 12px}
-label{font-weight:650;font-size:14px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.list{display:grid;gap:8px}.item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #dde3e7;border-radius:10px}
-.muted{color:#66737d;font-size:13px}.qrbox{text-align:center}.qrbox img{max-width:280px;width:100%}.actions{display:flex;gap:8px;flex-wrap:wrap}
-.status{padding:10px;border-radius:8px;background:#eef5f1;margin-bottom:12px}.error{background:#fff0ef;color:#8a1c13}.folder{border:1px solid #dde3e7;border-radius:12px;padding:14px}.folder h3{margin:0 0 5px}.folder-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.folder-count{font-size:13px;color:#66737d}.empty{padding:8px 0}.select{width:100%;padding:11px;border:1px solid #ccd4d9;border-radius:8px;font:inherit;margin:5px 0 12px}
-@media(max-width:650px){.grid{grid-template-columns:1fr}}
+:root{
+  --bg:#f3f5f7;--surface:#ffffff;--surface-2:#f8fafb;--text:#17202a;
+  --muted:#66737d;--line:#dce3e8;--accent:#1f6f4a;--accent-dark:#16563a;
+  --danger:#b42318;--shadow:0 8px 30px rgba(23,32,42,.07)
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:var(--text);line-height:1.45}
+header{background:linear-gradient(135deg,#15231e,#1f6f4a);color:#fff;padding:16px 20px;box-shadow:0 2px 14px rgba(0,0,0,.14)}
+.header-inner{max-width:980px;margin:auto;display:flex;align-items:center;gap:13px}
+.logo{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:0 0 auto}
+.logo svg{width:27px;height:27px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.brand{font-weight:800;font-size:19px;letter-spacing:.1px}.brand-sub{font-size:12px;color:rgba(255,255,255,.72);margin-top:1px}
+main{max-width:980px;margin:26px auto;padding:0 16px 40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 14px;font-size:19px;letter-spacing:-.2px}.card h3{margin:0}
+button{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--accent);color:white;transition:.15s ease}
+button:hover{background:var(--accent-dark);transform:translateY(-1px)}
+button.secondary{background:#edf1f3;color:var(--text)}button.secondary:hover{background:#e3e8eb}
+button.danger{background:var(--danger)}button.danger:hover{background:#941b12}
+input,textarea{width:100%;padding:11px 12px;border:1px solid #cbd4da;border-radius:9px;font:inherit;margin:6px 0 13px;background:#fff;color:var(--text);outline:none}
+input:focus,textarea:focus,.select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,111,74,.10)}
+label{font-weight:700;font-size:13px;color:#34414a}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 14px}
+.list{display:grid;gap:9px}
+.item{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2)}
+.item b{font-size:14px}.muted{color:var(--muted);font-size:13px}
+.qrbox{text-align:center}.qrbox img{max-width:280px;width:100%;border:1px solid var(--line);border-radius:12px;padding:8px;background:white}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.status{padding:10px 12px;border-radius:9px;background:#eef5f1;margin-bottom:12px}.error{background:#fff0ef;color:#8a1c13}
+.folder{border:1px solid var(--line);border-radius:13px;padding:15px;background:var(--surface-2);transition:.15s ease}
+.folder:hover{border-color:#c7d2d8;box-shadow:0 4px 14px rgba(23,32,42,.05)}
+.folder h3{font-size:15px}.folder-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:11px}
+.folder-count{font-size:12px;color:var(--muted);margin-top:3px}.empty{padding:7px 0}
+.select{width:100%;padding:11px 12px;border:1px solid #cbd4da;border-radius:9px;font:inherit;margin:6px 0 13px;background:white}
+.crumb{font-size:13px;color:var(--muted);margin-bottom:8px}
+.hero{background:linear-gradient(135deg,#fff,#f6f9f7);border:1px solid var(--line)}
+.hero-title{display:flex;align-items:center;gap:10px;margin-bottom:7px}.hero-icon{width:36px;height:36px;border-radius:10px;background:#e6f1eb;color:var(--accent);display:grid;place-items:center;font-size:18px}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:13px}
+.badge{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--muted);background:#fff}
+@media(max-width:650px){.grid{grid-template-columns:1fr}main{margin-top:16px;padding:0 12px 30px}.card{padding:16px}.item{gap:10px}.item button{padding:9px 11px}}
+
+.status-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.status-dot.ok{background:#1f9d63}.status-dot.bad{background:#c92a2a}
+.drone-state{display:inline-flex;align-items:center;font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;margin-top:5px}
+.drone-state.ok{background:#e7f6ee;color:#17643f}.drone-state.bad{background:#fdeceb;color:#9d2119}
+.dashboard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{padding:18px;border:1px solid var(--line);border-radius:13px;background:var(--surface-2)}
+.stat-value{font-size:30px;font-weight:850;line-height:1.1}.stat-label{font-size:12px;color:var(--muted);margin-top:4px}
+.stat.ok .stat-value{color:#1f7a4d}.stat.bad .stat-value{color:#b42318}
+.map-status-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-top:6px}
+.bottom-status{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.deploy-btn{width:100%;font-size:15px;padding:13px 16px}
+.deploy-btn.available{background:#1f7a4d}.deploy-btn.unavailable{background:#b42318}
+@media(max-width:650px){.dashboard-grid{grid-template-columns:1fr}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<header><h1>🚁 Drone QR Notities</h1></header>
+<header><div class="header-inner">
+  <div class="logo" aria-label="Drone">
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M8 12h6l2 2 2-2h6"/>
+      <path d="M10 12l-2-4M22 12l2-4M10 20l-2 4M22 20l2 4"/>
+      <path d="M13 14h6v5h-6z"/>
+      <path d="M11 18h10"/>
+      <circle cx="7" cy="6.5" r="2"/><circle cx="25" cy="6.5" r="2"/>
+      <circle cx="7" cy="25.5" r="2"/><circle cx="25" cy="25.5" r="2"/>
+    </svg>
+  </div>
+  <div><div class="brand">Drone QR Notities</div><div class="brand-sub">Fleet & onderhoudsbeheer</div></div>
+</div></header>
 <main id="app"><div class="card">Laden...</div></main>
 <script>
 /*
@@ -50,14 +106,67 @@ async function getDrone(id){
   const {data,error}=await db.from("drones").select("*,folders(id,name)").eq("drone_id",id).maybeSingle();
   if(error) throw error; return data;
 }
+
+function descendants(folderId, folders){
+  const ids=[Number(folderId)];
+  let changed=true;
+  while(changed){
+    changed=false;
+    folders.forEach(f=>{
+      if(f.parent_id!=null && ids.includes(Number(f.parent_id)) && !ids.includes(Number(f.id))){
+        ids.push(Number(f.id)); changed=true;
+      }
+    });
+  }
+  return ids;
+}
+function statusLabel(d){
+  return d.is_deployable===false
+    ? '<span class="drone-state bad"><span class="status-dot bad"></span>Niet inzetbaar</span>'
+    : '<span class="drone-state ok"><span class="status-dot ok"></span>Inzetbaar</span>';
+}
+function statusCounts(folder, folders, rows){
+  const ids=descendants(folder.id,folders);
+  const ds=rows.filter(d=>d.folder_id!=null && ids.includes(Number(d.folder_id)));
+  return {total:ds.length, ok:ds.filter(d=>d.is_deployable!==false).length, bad:ds.filter(d=>d.is_deployable===false).length};
+}
+async function dashboard(){
+  try{
+    const [rows,folders]=await Promise.all([getDrones(),getFolders()]);
+    const ok=rows.filter(d=>d.is_deployable!==false).length;
+    const bad=rows.filter(d=>d.is_deployable===false).length;
+    const topFolders=folders.filter(f=>!f.parent_id);
+    app.innerHTML=`<div class="card hero">
+      <div class="section-head"><div><div class="crumb">Overzicht</div><h2>Algemeen dashboard</h2></div>
+      <button class="secondary" onclick="location.hash=''">← Mappen</button></div>
+      <div class="dashboard-grid">
+        <div class="stat"><div class="stat-value">${rows.length}</div><div class="stat-label">Totaal drones</div></div>
+        <div class="stat ok"><div class="stat-value">${ok}</div><div class="stat-label">Inzetbaar</div></div>
+        <div class="stat bad"><div class="stat-value">${bad}</div><div class="stat-label">Niet inzetbaar</div></div>
+      </div>
+    </div>
+    <div class="card"><div class="section-head"><h2>Status per map</h2><span class="badge">${folders.length} ${folders.length===1?"map":"mappen"}</span></div><div id="dashmaps" class="list"></div></div>`;
+    const el=document.getElementById("dashmaps");
+    if(!folders.length){el.innerHTML='<p class="muted">Nog geen mappen.</p>';return;}
+    folders.forEach(f=>{
+      const c=statusCounts(f,folders,rows);
+      el.innerHTML+=`<div class="item"><div>
+        <b>▣ ${esc(f.name)}</b>
+        <div class="map-status-row"><span class="status-dot ok"></span>${c.ok} inzetbaar · <span class="status-dot bad"></span>${c.bad} niet inzetbaar · ${c.total} totaal</div>
+      </div><button onclick="openFolder(${f.id})">Openen</button></div>`;
+    });
+  }catch(e){showError(e)}
+}
 function showError(e){
   app.innerHTML=`<div class="card error"><h2>Er is iets misgegaan</h2><p>${esc(e.message||e)}</p><button onclick="location.reload()">Opnieuw proberen</button></div>`;
 }
-function folderCard(folder,count){
+function folderCard(folder,count,subCount=0,ok=null,bad=null){
+  const status=ok!==null?`<div class="map-status-row"><span class="status-dot ok"></span>${ok} inzetbaar · <span class="status-dot bad"></span>${bad} niet inzetbaar</div>`:"";
   return `<div class="folder">
-    <h3>📁 ${esc(folder.name)}</h3>
-    <div class="folder-count">${count} ${count===1?"drone":"drones"}</div>
-    <div class="folder-actions" style="margin-top:10px">
+    <h3>▣ ${esc(folder.name)}</h3>
+    <div class="folder-count">${count} ${count===1?"drone":"drones"}${subCount?` · ${subCount} ${subCount===1?"submap":"submappen"}`:""}</div>
+    ${status}
+    <div class="folder-actions">
       <button onclick="openFolder(${folder.id})">Openen</button>
       <button class="secondary" onclick="renameFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Naam wijzigen</button>
       <button class="danger" onclick="removeFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Verwijderen</button>
@@ -71,38 +180,41 @@ async function home(){
   }
   try{
     const [rows,folders]=await Promise.all([getDrones(),getFolders()]);
-    app.innerHTML=`<div class="card">
-      <div class="actions">
-        <button onclick="newFolder()">+ Map maken</button>
-      </div>
-      <p class="muted">Maak eerst een map, open daarna de map om drones toe te voegen. De gegevens worden centraal opgeslagen.</p>
+    const topFolders=folders.filter(f=>!f.parent_id);
+    app.innerHTML=`<div class="card hero">
+      <div class="hero-title"><div class="hero-icon">▦</div><h2>Dronebeheer</h2></div>
+      <p class="muted">Organiseer je drones in een onbeperkte mappenstructuur. Maak op ieder niveau een submap of voeg direct een drone toe.</p>
+      <div class="actions"><button onclick="newFolder(null)">+ Nieuwe map</button><button class="secondary" onclick="location.hash='dashboard'">Dashboard</button></div>
     </div>
-    <div class="card"><h2>Mijn mappen</h2><div id="folders" class="list"></div></div>
-    <div class="card"><h2>Drones zonder map</h2><div id="unassigned" class="list"></div></div>`;
+    <div class="card"><div class="section-head"><h2>Mijn mappen</h2><span class="badge">${topFolders.length} ${topFolders.length===1?"map":"mappen"}</span></div><div id="folders" class="list"></div></div>
+    <div class="card"><div class="section-head"><h2>Drones zonder map</h2></div><div id="unassigned" class="list"></div></div>`;
 
     const folderEl=document.getElementById("folders");
-    if(!folders.length) folderEl.innerHTML='<p class="muted empty">Nog geen mappen. Maak hierboven je eerste map.</p>';
-    else folders.forEach(f=>{
+    if(!topFolders.length) folderEl.innerHTML='<p class="muted empty">Nog geen mappen. Maak hierboven je eerste map.</p>';
+    else topFolders.forEach(f=>{
       const count=rows.filter(d=>d.folder_id===f.id).length;
-      folderEl.innerHTML+=folderCard(f,count);
+      const subCount=folders.filter(x=>x.parent_id===f.id).length;
+      const sc=statusCounts(f,folders,rows);
+      folderEl.innerHTML+=folderCard(f,count,subCount,sc.ok,sc.bad);
     });
 
     const unassigned=rows.filter(d=>!d.folder_id);
     const unEl=document.getElementById("unassigned");
     if(!unassigned.length) unEl.innerHTML='<p class="muted empty">Geen drones zonder map.</p>';
     else unassigned.forEach(d=>{
-      unEl.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div></div>
+      unEl.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div>${statusLabel(d)}</div>
         <button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div>`;
     });
   }catch(e){showError(e)}
 }
-async function newFolder(){
-  const name=prompt("Naam van de nieuwe map:");
+async function newFolder(parentId=null){
+  const name=prompt(parentId ? "Naam van de nieuwe submap:" : "Naam van de nieuwe map:");
   if(name===null) return;
   const clean=name.trim();
   if(!clean){alert("Geef de map een naam.");return;}
   try{
-    const {data,error}=await db.from("folders").insert({name:clean}).select().single();
+    const payload={name:clean,parent_id:parentId?Number(parentId):null};
+    const {data,error}=await db.from("folders").insert(payload).select().single();
     if(error) throw error;
     openFolder(data.id);
   }catch(e){showError(e)}
@@ -116,20 +228,37 @@ async function folderPage(folderId){
     if(!folder){
       app.innerHTML='<div class="card"><h2>Map niet gevonden</h2><button onclick="location.hash=\'\'">Terug</button></div>';return;
     }
+    const parent=folder.parent_id ? folders.find(f=>String(f.id)===String(folder.parent_id)) : null;
+    const subfolders=folders.filter(f=>String(f.parent_id)===String(folder.id));
     const drones=rows.filter(d=>String(d.folder_id)===String(folder.id));
+
     app.innerHTML=`<div class="card">
       <div class="actions">
-        <button class="secondary" onclick="location.hash=''">← Alle mappen</button>
+        <button class="secondary" onclick="${parent?`openFolder(${parent.id})`:`location.hash=''`}">← ${parent?`Naar ${esc(parent.name)}`:"Alle mappen"}</button>
+        <button onclick="newFolder(${folder.id})">+ Submap</button>
         <button onclick="newDrone(${folder.id})">+ Drone toevoegen</button>
+        <button class="secondary" onclick="location.hash='dashboard'">Dashboard</button>
         <button class="secondary" onclick="renameFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Mapnaam wijzigen</button>
       </div>
+      <div class="crumb">Map</div>
       <h2>📁 ${esc(folder.name)}</h2>
-      <p class="muted">${drones.length} ${drones.length===1?"drone":"drones"}</p>
+      <p class="muted">${subfolders.length} ${subfolders.length===1?"submap":"submappen"} · ${drones.length} ${drones.length===1?"drone":"drones"}</p>
     </div>
-    <div class="card"><div id="list" class="list"></div></div>`;
+    <div class="card"><h2>Submappen</h2><div id="subfolders" class="list"></div></div>
+    <div class="card"><h2>Drones in deze map</h2><div id="list" class="list"></div></div>`;
+
+    const sf=document.getElementById("subfolders");
+    if(!subfolders.length) sf.innerHTML='<p class="muted">Nog geen submappen.</p>';
+    else subfolders.forEach(f=>{
+      const count=rows.filter(d=>d.folder_id===f.id).length;
+      const subCount=folders.filter(x=>x.parent_id===f.id).length;
+      const sc=statusCounts(f,folders,rows);
+      sf.innerHTML+=folderCard(f,count,subCount,sc.ok,sc.bad);
+    });
+
     const list=document.getElementById("list");
-    if(!drones.length){list.innerHTML='<p class="muted">Nog geen drones in deze map. Klik op “+ Drone toevoegen”.</p>';return;}
-    drones.forEach(d=>list.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div></div>
+    if(!drones.length){list.innerHTML='<p class="muted">Nog geen drones in deze map. Je kunt hierboven een drone of submap toevoegen.</p>';return;}
+    drones.forEach(d=>list.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div>${statusLabel(d)}</div>
       <button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div>`);
   }catch(e){showError(e)}
 }
@@ -138,7 +267,7 @@ async function newDrone(folderId){
     const rows=await getDrones();
     const nums=rows.map(x=>/^DRONE-(\d+)$/.test(x.drone_id)?+x.drone_id.split("-")[1]:0);
     const id="DRONE-"+(Math.max(0,...nums)+1).toString().padStart(3,"0");
-    const {error}=await db.from("drones").insert({drone_id:id,folder_id:folderId});
+    const {error}=await db.from("drones").insert({drone_id:id,folder_id:folderId,is_deployable:true});
     if(error) throw error;
     openDrone(id);
   }catch(e){showError(e)}
@@ -158,8 +287,10 @@ async function removeFolder(id,name){
   try{
     const {count,error:countError}=await db.from("drones").select("id",{count:"exact",head:true}).eq("folder_id",id);
     if(countError) throw countError;
-    if((count||0)>0){
-      alert(`Map "${name}" bevat nog ${count} ${(count||0)===1?"drone":"drones"}. Verplaats of verwijder die eerst.`);
+    const {count:subCount,error:subError}=await db.from("folders").select("id",{count:"exact",head:true}).eq("parent_id",id);
+    if(subError) throw subError;
+    if((count||0)>0 || (subCount||0)>0){
+      alert(`Map "${name}" bevat nog ${count||0} ${(count||0)===1?"drone":"drones"} en ${subCount||0} ${(subCount||0)===1?"submap":"submappen"}. Verwijder of verplaats die eerst.`);
       return;
     }
     if(!confirm(`Map "${name}" verwijderen?`)) return;
@@ -176,7 +307,8 @@ async function dronePage(id){
     app.innerHTML=`<div class="card">
       <div class="actions"><button class="secondary" onclick="${d.folder_id?`location.hash='folder='+encodeURIComponent('${d.folder_id}')`:`location.hash=''`}">← Terug</button>
       <button onclick="editSave('${esc(id)}')">Opslaan</button><button class="danger" onclick="removeDrone('${esc(id)}')">Verwijderen</button></div>
-      <h2>${esc(id)}</h2><div id="status"></div>
+      <h2>${esc(id)}</h2>
+      <div class="status">${statusLabel(d)}</div>
       <label>Map</label>
       <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
@@ -187,6 +319,12 @@ async function dronePage(id){
       ${field("Accu","battery",d.battery)}</div>
       <label>Notities</label><textarea id="notes" rows="7">${esc(d.notes)}</textarea>
       <label>Onderhoudshistorie</label><textarea id="history" rows="7">${esc(d.history)}</textarea>
+      <div class="bottom-status">
+        <label>Inzetbaarheid</label>
+        <button id="deployBtn" class="deploy-btn ${d.is_deployable===false?"unavailable":"available"}" onclick="toggleDeploy('${esc(id)}',${d.is_deployable===false})">
+          ${d.is_deployable===false?"✕ Niet inzetbaar — klik om inzetbaar te maken":"✓ Inzetbaar — klik om niet inzetbaar te maken"}
+        </button>
+      </div>
     </div>
     <div class="card qrbox"><h2>QR-sticker</h2>
       <p class="muted">Deze QR opent altijd deze dronepagina. Wijzigingen aan de map veranderen de QR niet.</p>
@@ -194,6 +332,12 @@ async function dronePage(id){
       <div class="actions" style="justify-content:center"><button onclick="downloadQR('${esc(id)}')">QR opslaan</button><button class="secondary" onclick="printQR('${esc(id)}')">QR printen</button></div>
     </div>`;
   }catch(e){showError(e)}
+}
+async function toggleDeploy(id,currentUnavailable){
+  const next=!currentUnavailable;
+  const {error}=await db.from("drones").update({is_deployable:next,updated_at:new Date().toISOString()}).eq("drone_id",id);
+  if(error){showError(error);return}
+  await dronePage(id);
 }
 async function editSave(id){
   const folderValue=document.getElementById("folder_id").value;
@@ -216,7 +360,8 @@ function printQR(id){
   w.document.close();
 }
 async function render(){
-  if(location.hash.startsWith("#drone=")){
+  if(location.hash==="#dashboard"){await dashboard();
+  }else if(location.hash.startsWith("#drone=")){
     const id=decodeURIComponent(location.hash.slice(7)); await dronePage(id);
   }else if(location.hash.startsWith("#folder=")){
     const id=decodeURIComponent(location.hash.slice(8)); await folderPage(id);
