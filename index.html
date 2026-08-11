@@ -14,7 +14,7 @@ input,textarea{width:100%;padding:11px;border:1px solid #ccd4d9;border-radius:8p
 label{font-weight:650;font-size:14px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .list{display:grid;gap:8px}.item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #dde3e7;border-radius:10px}
 .muted{color:#66737d;font-size:13px}.qrbox{text-align:center}.qrbox img{max-width:280px;width:100%}.actions{display:flex;gap:8px;flex-wrap:wrap}
-.status{padding:10px;border-radius:8px;background:#eef5f1;margin-bottom:12px}.error{background:#fff0ef;color:#8a1c13}
+.status{padding:10px;border-radius:8px;background:#eef5f1;margin-bottom:12px}.error{background:#fff0ef;color:#8a1c13}.folder{border:1px solid #dde3e7;border-radius:12px;padding:14px}.folder h3{margin:0 0 5px}.folder-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.folder-count{font-size:13px;color:#66737d}.empty{padding:8px 0}.select{width:100%;padding:11px;border:1px solid #ccd4d9;border-radius:8px;font:inherit;margin:5px 0 12px}
 @media(max-width:650px){.grid{grid-template-columns:1fr}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -39,45 +39,146 @@ function qrImage(text){return "https://api.qrserver.com/v1/create-qr-code/?size=
 function field(label,key,val){return `<div><label>${label}</label><input id="${key}" value="${esc(val)}"></div>`;}
 
 async function getDrones(){
-  const {data,error}=await db.from("drones").select("*").order("drone_id");
+  const {data,error}=await db.from("drones").select("*,folders(id,name)").order("drone_id");
+  if(error) throw error; return data||[];
+}
+async function getFolders(){
+  const {data,error}=await db.from("folders").select("*").order("name");
   if(error) throw error; return data||[];
 }
 async function getDrone(id){
-  const {data,error}=await db.from("drones").select("*").eq("drone_id",id).maybeSingle();
+  const {data,error}=await db.from("drones").select("*,folders(id,name)").eq("drone_id",id).maybeSingle();
   if(error) throw error; return data;
 }
-function showError(e){app.innerHTML=`<div class="card error"><h2>Er is iets misgegaan</h2><p>${esc(e.message||e)}</p><button onclick="location.reload()">Opnieuw proberen</button></div>`;}
-
+function showError(e){
+  app.innerHTML=`<div class="card error"><h2>Er is iets misgegaan</h2><p>${esc(e.message||e)}</p><button onclick="location.reload()">Opnieuw proberen</button></div>`;
+}
+function folderCard(folder,count){
+  return `<div class="folder">
+    <h3>📁 ${esc(folder.name)}</h3>
+    <div class="folder-count">${count} ${count===1?"drone":"drones"}</div>
+    <div class="folder-actions" style="margin-top:10px">
+      <button onclick="openFolder(${folder.id})">Openen</button>
+      <button class="secondary" onclick="renameFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Naam wijzigen</button>
+      <button class="danger" onclick="removeFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Verwijderen</button>
+    </div>
+  </div>`;
+}
 async function home(){
-  if(!configured){app.innerHTML=`<div class="card error"><h2>Supabase nog niet gekoppeld</h2><p>Open <b>index.html</b> en vul alleen de <b>Publishable key</b> van Supabase in bij SUPABASE_KEY. Gebruik nooit de Secret key.</p></div>`;return;}
+  if(!configured){
+    app.innerHTML=`<div class="card error"><h2>Supabase nog niet gekoppeld</h2><p>Open <b>index.html</b> en vul alleen de <b>Publishable key</b> van Supabase in bij SUPABASE_KEY. Gebruik nooit de Secret key.</p></div>`;
+    return;
+  }
   try{
-    const rows=await getDrones();
-    app.innerHTML=`<div class="card"><button onclick="newDrone()">+ Drone toevoegen</button>
-      <p class="muted">De gegevens worden centraal opgeslagen. De QR-code van een drone blijft hetzelfde.</p></div>
-      <div class="card"><h2>Mijn drones</h2><div id="list" class="list"></div></div>`;
-    const list=document.getElementById("list");
-    if(!rows.length){list.innerHTML='<p class="muted">Nog geen drones aangemaakt.</p>';return;}
-    rows.forEach(d=>list.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div></div><button onclick="location.hash='drone='+encodeURIComponent('${encodeURIComponent(d.drone_id)}')">Openen</button></div>`);
+    const [rows,folders]=await Promise.all([getDrones(),getFolders()]);
+    app.innerHTML=`<div class="card">
+      <div class="actions">
+        <button onclick="newFolder()">+ Map maken</button>
+      </div>
+      <p class="muted">Maak eerst een map, open daarna de map om drones toe te voegen. De gegevens worden centraal opgeslagen.</p>
+    </div>
+    <div class="card"><h2>Mijn mappen</h2><div id="folders" class="list"></div></div>
+    <div class="card"><h2>Drones zonder map</h2><div id="unassigned" class="list"></div></div>`;
+
+    const folderEl=document.getElementById("folders");
+    if(!folders.length) folderEl.innerHTML='<p class="muted empty">Nog geen mappen. Maak hierboven je eerste map.</p>';
+    else folders.forEach(f=>{
+      const count=rows.filter(d=>d.folder_id===f.id).length;
+      folderEl.innerHTML+=folderCard(f,count);
+    });
+
+    const unassigned=rows.filter(d=>!d.folder_id);
+    const unEl=document.getElementById("unassigned");
+    if(!unassigned.length) unEl.innerHTML='<p class="muted empty">Geen drones zonder map.</p>';
+    else unassigned.forEach(d=>{
+      unEl.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div></div>
+        <button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div>`;
+    });
   }catch(e){showError(e)}
 }
-async function newDrone(){
+async function newFolder(){
+  const name=prompt("Naam van de nieuwe map:");
+  if(name===null) return;
+  const clean=name.trim();
+  if(!clean){alert("Geef de map een naam.");return;}
+  try{
+    const {data,error}=await db.from("folders").insert({name:clean}).select().single();
+    if(error) throw error;
+    openFolder(data.id);
+  }catch(e){showError(e)}
+}
+function openFolder(id){location.hash="folder="+encodeURIComponent(id);}
+function openDrone(id){location.hash="drone="+encodeURIComponent(id);}
+async function folderPage(folderId){
+  try{
+    const [folders,rows]=await Promise.all([getFolders(),getDrones()]);
+    const folder=folders.find(f=>String(f.id)===String(folderId));
+    if(!folder){
+      app.innerHTML='<div class="card"><h2>Map niet gevonden</h2><button onclick="location.hash=\'\'">Terug</button></div>';return;
+    }
+    const drones=rows.filter(d=>String(d.folder_id)===String(folder.id));
+    app.innerHTML=`<div class="card">
+      <div class="actions">
+        <button class="secondary" onclick="location.hash=''">← Alle mappen</button>
+        <button onclick="newDrone(${folder.id})">+ Drone toevoegen</button>
+        <button class="secondary" onclick="renameFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Mapnaam wijzigen</button>
+      </div>
+      <h2>📁 ${esc(folder.name)}</h2>
+      <p class="muted">${drones.length} ${drones.length===1?"drone":"drones"}</p>
+    </div>
+    <div class="card"><div id="list" class="list"></div></div>`;
+    const list=document.getElementById("list");
+    if(!drones.length){list.innerHTML='<p class="muted">Nog geen drones in deze map. Klik op “+ Drone toevoegen”.</p>';return;}
+    drones.forEach(d=>list.innerHTML+=`<div class="item"><div><b>${esc(d.drone_id)}</b><div class="muted">${esc(d.type||"")}</div></div>
+      <button onclick="openDrone('${esc(d.drone_id)}')">Openen</button></div>`);
+  }catch(e){showError(e)}
+}
+async function newDrone(folderId){
   try{
     const rows=await getDrones();
     const nums=rows.map(x=>/^DRONE-(\d+)$/.test(x.drone_id)?+x.drone_id.split("-")[1]:0);
     const id="DRONE-"+(Math.max(0,...nums)+1).toString().padStart(3,"0");
-    const {error}=await db.from("drones").insert({drone_id:id});
+    const {error}=await db.from("drones").insert({drone_id:id,folder_id:folderId});
     if(error) throw error;
-    location.hash="drone="+encodeURIComponent(id);
+    openDrone(id);
+  }catch(e){showError(e)}
+}
+async function renameFolder(id,currentName){
+  const name=prompt("Nieuwe mapnaam:",currentName);
+  if(name===null) return;
+  const clean=name.trim();
+  if(!clean){alert("Geef de map een naam.");return;}
+  try{
+    const {error}=await db.from("folders").update({name:clean}).eq("id",id);
+    if(error) throw error;
+    if(location.hash.startsWith("#folder=")) folderPage(id); else home();
+  }catch(e){showError(e)}
+}
+async function removeFolder(id,name){
+  try{
+    const {count,error:countError}=await db.from("drones").select("id",{count:"exact",head:true}).eq("folder_id",id);
+    if(countError) throw countError;
+    if((count||0)>0){
+      alert(`Map "${name}" bevat nog ${count} ${(count||0)===1?"drone":"drones"}. Verplaats of verwijder die eerst.`);
+      return;
+    }
+    if(!confirm(`Map "${name}" verwijderen?`)) return;
+    const {error}=await db.from("folders").delete().eq("id",id);
+    if(error) throw error;
+    location.hash="";
   }catch(e){showError(e)}
 }
 async function dronePage(id){
   try{
-    const d=await getDrone(id);
+    const [d,folders]=await Promise.all([getDrone(id),getFolders()]);
     if(!d){app.innerHTML='<div class="card"><h2>Drone niet gevonden</h2><button onclick="location.hash=\'\'">Terug</button></div>';return;}
+    const options=folders.map(f=>`<option value="${f.id}" ${String(f.id)===String(d.folder_id)?"selected":""}>${esc(f.name)}</option>`).join("");
     app.innerHTML=`<div class="card">
-      <div class="actions"><button class="secondary" onclick="location.hash=''">← Overzicht</button>
+      <div class="actions"><button class="secondary" onclick="${d.folder_id?`location.hash='folder='+encodeURIComponent('${d.folder_id}')`:`location.hash=''`}">← Terug</button>
       <button onclick="editSave('${esc(id)}')">Opslaan</button><button class="danger" onclick="removeDrone('${esc(id)}')">Verwijderen</button></div>
       <h2>${esc(id)}</h2><div id="status"></div>
+      <label>Map</label>
+      <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
       ${field("Type","type",d.type)}${field("Flight controller","fc",d.fc)}
       ${field("ESC","esc",""+(d.esc||""))}${field("Motoren","motors",d.motors)}
@@ -88,14 +189,15 @@ async function dronePage(id){
       <label>Onderhoudshistorie</label><textarea id="history" rows="7">${esc(d.history)}</textarea>
     </div>
     <div class="card qrbox"><h2>QR-sticker</h2>
-      <p class="muted">Deze QR opent altijd deze dronepagina. Wijzigingen veranderen de QR niet.</p>
+      <p class="muted">Deze QR opent altijd deze dronepagina. Wijzigingen aan de map veranderen de QR niet.</p>
       <img src="${qrImage(qrUrl(id))}" alt="QR-code ${esc(id)}"><p><b>${esc(id)}</b></p>
       <div class="actions" style="justify-content:center"><button onclick="downloadQR('${esc(id)}')">QR opslaan</button><button class="secondary" onclick="printQR('${esc(id)}')">QR printen</button></div>
     </div>`;
   }catch(e){showError(e)}
 }
 async function editSave(id){
-  const row={type:type.value,fc:fc.value,esc:document.getElementById("esc").value,motors:motors.value,rx:rx.value,vtx:vtx.value,gps:gps.value,firmware:firmware.value,battery:battery.value,notes:notes.value,history:history.value,updated_at:new Date().toISOString()};
+  const folderValue=document.getElementById("folder_id").value;
+  const row={folder_id:folderValue?Number(folderValue):null,type:type.value,fc:fc.value,esc:document.getElementById("esc").value,motors:motors.value,rx:rx.value,vtx:vtx.value,gps:gps.value,firmware:firmware.value,battery:battery.value,notes:notes.value,history:history.value,updated_at:new Date().toISOString()};
   const {error}=await db.from("drones").update(row).eq("drone_id",id);
   if(error){showError(error);return}
   document.getElementById("status").innerHTML='<div class="status">✓ Opgeslagen</div>';
@@ -116,6 +218,8 @@ function printQR(id){
 async function render(){
   if(location.hash.startsWith("#drone=")){
     const id=decodeURIComponent(location.hash.slice(7)); await dronePage(id);
+  }else if(location.hash.startsWith("#folder=")){
+    const id=decodeURIComponent(location.hash.slice(8)); await folderPage(id);
   }else await home();
 }
 window.addEventListener("hashchange",render); render();
