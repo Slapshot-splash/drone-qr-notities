@@ -144,6 +144,7 @@ async function dashboard(){
     const [rows,folders]=await Promise.all([getDrones(),getFolders()]);
     const good=rows.filter(d=>d.is_deployable!==false).length;
     const bad=rows.length-good;
+    const types=["ISR","DROP","STRIKE"];
     const directChildren=(fid)=>folders.filter(f=>String(f.parent_id)===String(fid));
     const descendants=(fid)=>{
       const ids=new Set([String(fid)]); let changed=true;
@@ -155,6 +156,10 @@ async function dashboard(){
       const ds=rows.filter(d=>d.folder_id!=null && ids.has(String(d.folder_id)));
       return {f,total:ds.length,good:ds.filter(d=>d.is_deployable!==false).length,bad:ds.filter(d=>d.is_deployable===false).length};
     });
+    const typeStats=types.map(t=>{
+      const ds=rows.filter(d=>String(d.type||"").toUpperCase()===t);
+      return {t,total:ds.length,good:ds.filter(d=>d.is_deployable!==false).length,bad:ds.filter(d=>d.is_deployable===false).length};
+    });
     app.innerHTML=`<div class="card hero">
       <div class="section-head"><div><div class="crumb">Overzicht</div><h2>Dashboard</h2><p class="muted">Actuele inzetbaarheid van je dronevloot.</p></div>
       <button class="secondary" onclick="location.hash=''">← Terug</button></div>
@@ -164,12 +169,21 @@ async function dashboard(){
       <div class="card"><div class="muted">Inzetbaar</div><div style="font-size:30px;font-weight:800;color:var(--accent)">${good}</div></div>
       <div class="card"><div class="muted">Niet inzetbaar</div><div style="font-size:30px;font-weight:800;color:var(--danger)">${bad}</div></div>
     </div>
+    <div class="card"><h2>Per type</h2>
+      <div class="list">
+        ${typeStats.map(s=>`<div class="item">
+          <div><b>${s.t}</b><div class="muted">${s.total} totaal · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div>
+          <span class="badge">${s.total?s.good+"/"+s.total:"0"}</span>
+        </div>`).join("")}
+      </div>
+    </div>
     <div class="card"><h2>Per hoofdmap</h2><div class="list" id="dashFolders"></div></div>`;
     const el=document.getElementById("dashFolders");
     if(!stats.length){el.innerHTML='<p class="muted">Nog geen mappen.</p>';return;}
     stats.forEach(s=>el.innerHTML+=`<div class="item"><div><b>▣ ${esc(s.f.name)}</b><div class="muted">${s.total} drones · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div><button onclick="openFolder(${s.f.id})">Openen</button></div>`);
   }catch(e){showError(e)}
 }
+
 async function newFolder(parentId=null){
   const name=prompt(parentId ? "Naam van de nieuwe submap:" : "Naam van de nieuwe map:");
   if(name===null) return;
@@ -274,7 +288,13 @@ async function dronePage(id){
       <label>Map</label>
       <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
-      ${field("Registratienummer","registration_number",d.registration_number||"")}${field("Type","type",d.type)}${field("Flight controller","fc",d.fc)}
+      ${field("Registratienummer","registration_number",d.registration_number||"")}<label for="type">Type</label>
+    <select id="type" class="select">
+      <option value="">Kies type</option>
+      <option value="ISR" ${d.type==="ISR"?"selected":""}>ISR</option>
+      <option value="DROP" ${d.type==="DROP"?"selected":""}>DROP</option>
+      <option value="STRIKE" ${d.type==="STRIKE"?"selected":""}>STRIKE</option>
+    </select>${field("Flight controller","fc",d.fc)}
       ${field("ESC","esc",""+(d.esc||""))}${field("Motoren","motors",d.motors)}
       ${field("RX","rx",d.rx)}${field("VTX","vtx",d.vtx)}
       ${field("GPS","gps",d.gps)}${field("Firmware","firmware",d.firmware)}
