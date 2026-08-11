@@ -302,7 +302,6 @@ async function dronePage(id){
       <label>Notities</label><textarea id="notes" rows="7">${esc(d.notes)}</textarea>
       <label>Onderhoudshistorie</label><textarea id="history" rows="7">${esc(d.history)}</textarea>
     </div>
-    <script></script>
     <div class="card qrbox"><h2>QR-sticker</h2>
       <p class="muted">Deze QR opent altijd deze dronepagina. Wijzigingen aan de map veranderen de QR niet.</p>
       <img src="${qrImage(qrUrl(id))}" alt="QR-code ${esc(id)}"><p><b>${esc(id)}</b></p>
