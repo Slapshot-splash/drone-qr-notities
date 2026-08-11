@@ -52,9 +52,6 @@ label{font-weight:700;font-size:13px;color:#34414a}
 .map-title img, .folder-title img, .section-title img{width:34px;height:34px;object-fit:contain;border-radius:6px;flex:0 0 34px}
 .folder-card img, .map-card img{width:34px;height:34px;object-fit:contain;border-radius:6px;flex:0 0 34px}
 .dashboard-folder img{width:28px;height:28px;object-fit:contain;border-radius:5px;flex:0 0 28px}
-
-.type-logo{width:34px !important;height:34px !important;object-fit:contain !important;flex:0 0 34px !important;border-radius:7px !important;background:#fff !important;border:1px solid var(--line,#dce3e8) !important;padding:2px !important;}
-.type-heading{display:flex !important;align-items:center !important;gap:9px !important;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -67,7 +64,14 @@ img[src^="data:image/"]{max-width:34px!important;max-height:34px!important;width
 .map-title,.folder-title,.section-title{display:flex;align-items:center;gap:8px}
 .map-title img,.folder-title img,.section-title img{width:34px!important;height:34px!important;object-fit:contain!important;flex:0 0 34px}
 </style>
-</head>
+<style>
+.section-divider{grid-column:1/-1;margin-top:10px;border-top:1px solid var(--line,#dce3e8);padding-top:14px}
+.section-divider h3{margin:0 0 2px}
+.compact-info{margin-top:12px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.info-grid>div{padding:10px;border:1px solid var(--line,#dce3e8);border-radius:8px}
+.info-grid span{display:block;font-size:12px;color:var(--muted,#667085);margin-bottom:3px}
+</style></head>
 <body>
 <header><div class="header-inner">
   <div class="logo" aria-label="Drone">
@@ -202,6 +206,9 @@ async function dashboard(){
       return ids;
     };
 
+    const locations=["Operator","Werkplaats","TDO","Fabrikant","Onderweg","Elders"];
+    const locationStats=locations.map(l=>({l,total:rows.filter(d=>String(d.location||"")===l).length}));
+    const logisticsCount=rows.filter(d=>["Werkplaats","Fabrikant","Onderweg"].includes(String(d.location||"")) || ["Onderhoud","Reparatie","Opgestuurd","Onderweg"].includes(String(d.operational_status||""))).length;
     const typeStats=types.map(t=>{
       const ds=rows.filter(d=>String(d.type||"").toUpperCase()===t);
       return {t,total:ds.length,good:ds.filter(d=>d.is_deployable!==false).length,bad:ds.filter(d=>d.is_deployable===false).length};
@@ -237,12 +244,9 @@ async function dashboard(){
       <div class="section-head"><h2>Per type</h2><span class="badge">Totaal / inzetbaar / niet inzetbaar</span></div>
       <div class="list">
         ${typeStats.map(s=>`<div class="item">
-           <div class="type-heading">
-             ${logoHtml(s.t,"type-logo")}
-             <div><b>${esc(s.t)}</b><div class="muted">${s.total} totaal · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div>
-           </div>
-           <span class="badge">${s.total ? `${s.good}/${s.total}` : "0"}</span>
-         </div>`).join("")}
+          <div><b>${s.t}</b><div class="muted">${s.total} totaal · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div></div>
+          <span class="badge">${s.total ? `${s.good}/${s.total}` : "0"}</span>
+        </div>`).join("")}
       </div>
     </div>
     <div class="card">
@@ -424,11 +428,48 @@ async function dronePage(id){
         ${d.bindphrase?`<button class="secondary" type="button" onclick="toggleBindphrase()">Verbergen</button>`:""}
       </div>
       <div id="deployStatus" class="status" style="display:flex;justify-content:space-between;align-items:center;gap:10px"></div>
+      <div class="card compact-info">
+        <h3>Operationeel & logistiek</h3>
+        <div class="info-grid">
+          <div><span>Locatie</span><b>${esc(d.location||"Niet ingesteld")}</b></div>
+          <div><span>Status</span><b>${esc(d.operational_status||"Niet ingesteld")}</b></div>
+          <div><span>Fabrikant</span><b>${esc(d.manufacturer||"—")}</b></div>
+          <div><span>RMA-/zaaknummer</span><b>${esc(d.rma_number||"—")}</b></div>
+          <div><span>Verzonden</span><b>${esc(d.sent_date||"—")}</b></div>
+          <div><span>Verwachte retour</span><b>${esc(d.expected_return_date||"—")}</b></div>
+        </div>
+        ${d.repair_notes?`<div class="muted" style="margin-top:10px"><b>Reparatienotitie:</b> ${esc(d.repair_notes)}</div>`:""}
+      </div>
       <div id="status"></div>
       <label>Map</label>
       <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
-      ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="bindphrase">Bindphrase wijzigen</label><input id="bindphrase" type="password" autocomplete="off" value="${esc(d.bindphrase||"")}"></div><div><label for="type">Type</label><select id="type" class="select">
+      ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="bindphrase">Bindphrase wijzigen</label><input id="bindphrase" type="password" autocomplete="off" value="${esc(d.bindphrase||"")}"></div><div class="section-divider"><h3>Operationele status</h3></div>
+<div><label for="location">Locatie</label><select id="location" class="select">
+<option value="">Kies locatie</option>
+<option value="Operator" ${d.location==="Basis"?"selected":""}>Operator</option>
+<option value="TDO">TDO</option><option value="Werkplaats" ${d.location==="Werkplaats"?"selected":""}>Werkplaats</option>
+<option value="Fabrikant" ${d.location==="Fabrikant"?"selected":""}>Fabrikant</option>
+<option value="Onderweg" ${d.location==="Onderweg"?"selected":""}>Onderweg</option>
+<option value="Elders" ${d.location==="Elders"?"selected":""}>Elders</option>
+</select></div>
+<div><label for="operational_status">Status</label><select id="operational_status" class="select">
+<option value="">Kies status</option>
+<option value="Beschikbaar" ${d.operational_status==="Beschikbaar"?"selected":""}>Beschikbaar</option>
+<option value="In gebruik" ${d.operational_status==="In gebruik"?"selected":""}>In gebruik</option>
+<option value="Onderhoud" ${d.operational_status==="Onderhoud"?"selected":""}>Onderhoud</option>
+<option value="Reparatie" ${d.operational_status==="Reparatie"?"selected":""}>Reparatie</option>
+<option value="Opgestuurd" ${d.operational_status==="Opgestuurd"?"selected":""}>Opgestuurd</option>
+<option value="Onderweg" ${d.operational_status==="Onderweg"?"selected":""}>Onderweg</option>
+<option value="Afgeschreven" ${d.operational_status==="Afgeschreven"?"selected":""}>Afgeschreven</option>
+</select></div>
+<div class="section-divider"><h3>Reparatie / logistiek</h3></div>
+<div><label for="manufacturer">Fabrikant</label><input id="manufacturer" value="${esc(d.manufacturer||"")}"></div>
+<div><label for="rma_number">RMA-/zaaknummer</label><input id="rma_number" value="${esc(d.rma_number||"")}"></div>
+<div><label for="sent_date">Datum verzonden</label><input id="sent_date" type="date" value="${esc(d.sent_date||"")}"></div>
+<div><label for="expected_return_date">Verwachte retourdatum</label><input id="expected_return_date" type="date" value="${esc(d.expected_return_date||"")}"></div>
+<div><label for="actual_return_date">Werkelijke retourdatum</label><input id="actual_return_date" type="date" value="${esc(d.actual_return_date||"")}"></div>
+<div><label for="repair_notes">Reparatienotitie</label><textarea id="repair_notes" rows="4">${esc(d.repair_notes||"")}</textarea></div><div><label for="type">Type</label><select id="type" class="select">
 <option value="">Kies type</option>
 <option value="ISR" ${d.type==="ISR"?"selected":""}>ISR</option>
 <option value="DROP" ${d.type==="DROP"?"selected":""}>DROP</option>
@@ -481,6 +522,14 @@ async function editSave(id){
   registration_number:document.getElementById("registration_number").value.trim()||null,
   bindphrase:document.getElementById("bindphrase").value||null,
   type:document.getElementById("type").value||null,
+  location:document.getElementById("location").value||null,
+  operational_status:document.getElementById("operational_status").value||null,
+  manufacturer:document.getElementById("manufacturer").value.trim()||null,
+  rma_number:document.getElementById("rma_number").value.trim()||null,
+  sent_date:document.getElementById("sent_date").value||null,
+  expected_return_date:document.getElementById("expected_return_date").value||null,
+  actual_return_date:document.getElementById("actual_return_date").value||null,
+  repair_notes:document.getElementById("repair_notes").value.trim()||null,
   fc:document.getElementById("fc").value,
   esc:document.getElementById("esc").value,
   motors:document.getElementById("motors").value,
