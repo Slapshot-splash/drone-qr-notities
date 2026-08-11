@@ -211,21 +211,23 @@ async function dashboard(){
     const logisticsCount=rows.filter(d=>["Werkplaats","Fabrikant","Onderweg"].includes(String(d.location||"")) || ["Onderhoud","Reparatie","Opgestuurd","Onderweg"].includes(String(d.operational_status||""))).length;
     const typeStats=types.map(t=>{
       const ds=rows.filter(d=>String(d.type||"").toUpperCase()===t);
-      return {t,total:ds.length,good:ds.filter(d=>d.is_deployable!==false).length,bad:ds.filter(d=>d.is_deployable===false).length};
+      return {t,total:ds.length,good:ds.filter(d=>d.operational_status==="Inzetbaar").length,bad:ds.filter(d=>d.operational_status && d.operational_status!=="Inzetbaar").length};
     });
 
     const rootFolders=folders.filter(f=>!f.parent_id);
+    const statusOrder=["Inzetbaar","Onderhoud","Reparatie","Fabrikant","Afgeschreven","Uitgeleend"];
     const folderStats=rootFolders.map(f=>{
       const ids=descendants(f.id);
       const ds=rows.filter(d=>d.folder_id!=null && ids.has(String(d.folder_id)));
+      const status={};
+      statusOrder.forEach(st=>status[st]=ds.filter(d=>d.operational_status===st).length);
+      const typeCounts={};
+      types.forEach(t=>typeCounts[t]=ds.filter(d=>String(d.type||"").toUpperCase()===t).length);
       return {
         f,total:ds.length,
-        good:ds.filter(d=>d.is_deployable!==false).length,
-        bad:ds.filter(d=>d.is_deployable===false).length,
-        types:types.map(t=>{
-          const td=ds.filter(d=>String(d.type||"").toUpperCase()===t);
-          return {t,total:td.length,good:td.filter(d=>d.is_deployable!==false).length};
-        })
+        good:status["Inzetbaar"],
+        status,
+        typeCounts
       };
     });
 
@@ -259,12 +261,16 @@ async function dashboard(){
       el.innerHTML='<p class="muted">Nog geen mappen.</p>';
     }else{
       folderStats.forEach(s=>{
+        const statusText=statusOrder.filter(st=>s.status[st]>0).map(st=>`${st}: ${s.status[st]}`).join(" · ");
+        const typeText=types.filter(t=>s.typeCounts[t]>0).map(t=>`${t}: ${s.typeCounts[t]}`).join(" · ");
         el.innerHTML+=`<div class="item">
-          <div style="display:flex;align-items:center;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0">
             ${logoHtml(s.f.name,"folder-logo")}
-            <div><b>▣ ${esc(s.f.name)}</b>
-            <div class="muted">${s.total} drones · ${s.good} inzetbaar · ${s.bad} niet inzetbaar</div>
-            <div class="muted">${s.types.map(x=>`${x.t}: ${x.total}/${x.good}`).join(" · ")}</div></div>
+            <div style="min-width:0"><b>▣ ${esc(s.f.name)}</b>
+            <div class="muted">${s.total} drones · ${s.good} inzetbaar</div>
+            ${statusText?`<div class="muted">${esc(statusText)}</div>`:""}
+            ${typeText?`<div class="muted">${esc(typeText)}</div>`:""}
+            </div>
           </div>
           <button onclick="openFolder(${s.f.id})">Openen</button>
         </div>`;
