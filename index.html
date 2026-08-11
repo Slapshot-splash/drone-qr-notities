@@ -48,6 +48,44 @@ label{font-weight:700;font-size:13px;color:#34414a}
 @media(max-width:650px){.grid{grid-template-columns:1fr}main{margin-top:16px;padding:0 12px 30px}.card{padding:16px}.item{gap:10px}.item button{padding:9px 11px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+/* ASSETS_LOGO_FIX_START */
+<script>
+const ASSET_LOGO_EXTENSIONS = [".png", ".jpg", ".jpeg", ".jfif", ".webp"];
+
+function logoImgHtml(name, cls="folder-logo") {
+  const n = String(name || "").trim();
+  if (!n) return "";
+  const base = "assets/" + encodeURIComponent(n);
+  const id = "logo-" + Math.random().toString(36).slice(2);
+  return `<img id="${id}" class="${cls}" src="${base}.png" alt="" loading="lazy"
+    onerror="logoFallback(this, "${base}")">`;
+}
+
+function logoFallback(img, base) {
+  const exts = [".jpg", ".jpeg", ".jfif", ".webp"];
+  const next = Number(img.dataset.try || 0);
+  if (next < exts.length) {
+    img.dataset.try = String(next + 1);
+    img.src = base + exts[next];
+  } else {
+    img.style.display = "none";
+  }
+}
+</script>
+<style>
+.folder-logo,.map-logo,.dashboard-logo{
+  width:42px !important;height:42px !important;object-fit:contain !important;
+  flex:0 0 42px !important;border-radius:8px !important;
+  background:#fff !important;border:1px solid var(--line,#dce3e8) !important;
+  padding:3px !important;
+}
+.folder-heading,.map-heading,.dashboard-heading{
+  display:flex !important;align-items:center !important;gap:10px !important;
+}
+</style>
+/* ASSETS_LOGO_FIX_END */
+
 </head>
 <body>
 <header><div class="header-inner">
@@ -98,7 +136,7 @@ function showError(e){
 }
 function folderCard(folder,count,subCount=0){
   return `<div class="folder">
-    <h3>▣ ${esc(folder.name)}</h3>
+    <h3 class="folder-heading">${logoImgHtml(folder.name,"folder-logo")}<span>▣ ${esc(folder.name)}</span></h3>
     <div class="folder-count">${count} ${count===1?"drone":"drones"}${subCount?` · ${subCount} ${subCount===1?"submap":"submappen"}`:""}</div>
     <div class="folder-actions" style="margin-top:10px">
       <button onclick="openFolder(${folder.id})">Openen</button>
@@ -263,7 +301,7 @@ async function folderPage(folderId){
         <button class="secondary" onclick="renameFolder(${folder.id},'${esc(folder.name).replace(/'/g,"\\'")}')">Mapnaam wijzigen</button>
       </div>
       <div class="crumb">Map</div>
-      <h2>📁 ${esc(folder.name)}</h2>
+      <h2 class="map-heading">${logoImgHtml(folder.name,"map-logo")}<span>📁 ${esc(folder.name)}</span></h2>
       <p class="muted">${subfolders.length} ${subfolders.length===1?"submap":"submappen"} · ${drones.length} ${drones.length===1?"drone":"drones"}</p>
     </div>
     <div class="card"><h2>Submappen</h2><div id="subfolders" class="list"></div></div>
