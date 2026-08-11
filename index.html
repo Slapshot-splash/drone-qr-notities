@@ -301,6 +301,7 @@ async function newDrone(folderId){
       <div class="grid">
         <div><label>Drone-ID</label><input value="${id}" disabled></div>
         <div><label for="new_registration_number">Registratienummer</label><input id="new_registration_number" placeholder="Bijvoorbeeld PH-1234"></div>
+        <div><label for="new_bindphrase">Bindphrase</label><input id="new_bindphrase" type="password" autocomplete="off" placeholder="Bindphrase"></div>
         <div><label for="new_type">Type *</label><select id="new_type" class="select">
           <option value="">Kies type</option>
           <option value="ISR">ISR</option>
@@ -321,11 +322,13 @@ async function createDrone(id){
   if(!type){alert("Kies eerst een type: ISR, DROP of STRIKE.");return;}
   const folderValue=document.getElementById("new_folder_id").value;
   const registration=document.getElementById("new_registration_number").value.trim();
+  const bindphrase=document.getElementById("new_bindphrase").value;
   try{
     const payload={
       drone_id:id,
       folder_id:folderValue?Number(folderValue):null,
       registration_number:registration||null,
+      bindphrase:bindphrase||null,
       type:type,
       is_deployable:true
     };
@@ -376,7 +379,7 @@ async function dronePage(id){
       <label>Map</label>
       <select id="folder_id" class="select"><option value="">Geen map</option>${options}</select>
       <div class="grid">
-      ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="type">Type</label><select id="type" class="select">
+      ${field("Registratienummer","registration_number",d.registration_number||"")}<div><label for="bindphrase">Bindphrase</label><input id="bindphrase" type="password" autocomplete="off" value="${esc(d.bindphrase||"")}"></div><div><label for="type">Type</label><select id="type" class="select">
 <option value="">Kies type</option>
 <option value="ISR" ${d.type==="ISR"?"selected":""}>ISR</option>
 <option value="DROP" ${d.type==="DROP"?"selected":""}>DROP</option>
@@ -411,6 +414,7 @@ async function editSave(id){
   const row={
   folder_id:folderValue?Number(folderValue):null,
   registration_number:document.getElementById("registration_number").value.trim()||null,
+  bindphrase:document.getElementById("bindphrase").value||null,
   type:document.getElementById("type").value||null,
   fc:document.getElementById("fc").value,
   esc:document.getElementById("esc").value,
